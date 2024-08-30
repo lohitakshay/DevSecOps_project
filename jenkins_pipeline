@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'lohitakshay/sample-app'
+        SONARQUBE_URL = 'http://localhost:9000'
+        TRIVY_REPORT = 'trivy-report.html'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/lohitakshay/sample-app.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                script {
+                    dockerImage = docker.build(DOCKER_IMAGE)
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn sonar:sonar'
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh "trivy image ${DOCKER_IMAGE} > ${TRIVY_REPORT}"
+                publishHTML([allowMissing: false,
+                             alwaysLinkToLastBuild: false,
+                             keepAll: true,
+                             reportDir: '.',
+                             reportFiles: TRIVY_REPORT,
+                             reportName: "Trivy Security Scan"])
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    dockerImage.push()
+                    // Add your Kubernetes deployment script here
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Sending email notification...'
+            // Add email notification configuration here
+        }
+    }
+}
+
