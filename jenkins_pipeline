@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'Github_token', url: 'https://github.com/lohitakshay/sample-app.git'
+                git credentialsId: 'Github_token', url: 'https://github.com/lohitakshay/DevSecOps_project.git'
             }
         }
 
