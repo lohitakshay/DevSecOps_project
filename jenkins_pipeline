@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'lohitakshay/sample-app'
+        DOCKER_IMAGE = 'lohitakshay/devsecops-project'
         SONARQUBE_URL = 'http://localhost:9000'
         TRIVY_REPORT = 'trivy-report.html'
     }
@@ -17,7 +17,7 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    dockerImage = docker.build(DOCKER_IMAGE)
+                    dockerImage = docker.build(DOCKER_IMAGE, '-f devsec.dockerfile .')
                 }
             }
         }
