@@ -59,7 +59,3 @@ Contributions are welcome! Please fork this repository and submit a pull request
 ## Contact
 
 For any queries, please reach out to [Lohitakshay](mailto:lohitakshay2004@gmail.com).
-
----
-
-You can customize this template to fit the specifics of your project. Be sure to replace placeholders like `"your-username"` and `"your-repo-name"` with your actual GitHub username and repository name.
