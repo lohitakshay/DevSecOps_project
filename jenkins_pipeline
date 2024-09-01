@@ -2,9 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'lohitakshay/devsecops-project'
+        DOCKER_IMAGE = 'looooohit/devsecops-project'
         SONARQUBE_URL = 'http://localhost:9000'
-        TRIVY_REPORT = 'trivy-report.html'
+        Devsec_sonar = credentials('Devsec_sonar')
+        EMAIL_RECIPIENTS = 'lohitakshay2004@gmail.com'
+        DOCKER_REGISTRY = 'https://registry.hub.docker.com'
+        DOCKER_CREDENTIALS_ID = 'docker-credentials-id'
     }
 
     stages {
@@ -25,42 +28,55 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh 'mvn sonar:sonar'
+                    sh 'mvn clean verify sonar:sonar -Dsonar.login=${Devsec_sonar}'
                 }
             }
         }
 
-        stage('Security Scan') {
+        stage('Push Docker Image') {
             steps {
-                sh "trivy image ${DOCKER_IMAGE} > ${TRIVY_REPORT}"
-                publishHTML([allowMissing: false,
-                             alwaysLinkToLastBuild: false,
-                             keepAll: true,
-                             reportDir: '.',
-                             reportFiles: TRIVY_REPORT,
-                             reportName: "Trivy Security Scan"])
+                script {
+                    docker.withRegistry(DOCKER_REGISTRY, DOCKER_CREDENTIALS_ID) {
+                        dockerImage.push('latest')
+                    }
+                }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-		   // Push Docker image to the repository
-                   docker.withRegistry('https://registry.hub.docker.com', 'docker-credentials-id'_ {
-			dockerImage.push('latest')
-		   }
+                script {
+                    // Ensure kubectl is configured properly
+                    sh 'kubectl config view'
 
-		// Apply Kubernetes configurations
-       		sh 'kubectl apply -f deployment.yaml' 
+                    // Apply Kubernetes configurations as root
+                    sh 'sudo kubectl apply -f /home/devsec/devsecops/devsec_kub.yaml'
                 }
             }
         }
     }
 
     post {
-        always {
-            echo 'Sending email notification...'
-            // Add email notification configuration here
+        success {
+            emailext (
+                to: "${EMAIL_RECIPIENTS}",
+                subject: "Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "The build was successful. Check the build details at ${env.BUILD_URL}."
+            )
+        }
+        failure {
+            emailext (
+                to: "${EMAIL_RECIPIENTS}",
+                subject: "Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "The build failed. Check the build details at ${env.BUILD_URL}."
+            )
+        }
+        unstable {
+            emailext (
+                to: "${EMAIL_RECIPIENTS}",
+                subject: "Build Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "The build is unstable. Check the build details at ${env.BUILD_URL}."
+            )
         }
     }
 }
-
